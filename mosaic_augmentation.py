@@ -19,7 +19,7 @@ def resize_image(image, target_size):
     return cv2.resize(image, target_size)
 
 def compute_coords(x_ratio, y_ratio, output_size):
-    """Compute x_coords and y_coords based on ratios and output size."""
+    """Compute x_coords and y_coords based on partition ratios and output size."""
     if x_ratio >= 1.0 or y_ratio >= 1.0 or x_ratio <= 0 or y_ratio <= 0:
         print("\nInvalid ratio. Ratios should be between 0.0 and 1.0")
         return None, None
