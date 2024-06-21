@@ -57,7 +57,7 @@ def crop_random_region(image, x_start, x_end, y_start, y_end):
     # Crop the region from the image
     cropped_region = image[start_y:end_y, start_x:end_x]
     
-    return cropped_region, start_x, end_x, start_y, end_y
+    return cropped_region
 
 def draw_bounding_box(image, xmin, ymin, xmax, ymax):
     """Draw a bounding box on the image."""
@@ -106,7 +106,7 @@ def mosaic_augmentation(image_paths, x_coords, y_coords, output_size=416):
             original_image = resize_image(original_image, (output_size, output_size))
         
         # Crop a random region from the original image within its quadrant
-        cropped_region, start_x, end_x, start_y, end_y = crop_random_region(original_image, x_start, x_end, y_start, y_end)
+        cropped_region = crop_random_region(original_image, x_start, x_end, y_start, y_end)
         
         if cropped_region is None:
             print(f"\nFailed to crop region from image: {image_path}")
