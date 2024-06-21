@@ -75,7 +75,7 @@ def parse_xml_annotations(xml_path):
 
 def draw_bounding_box(image, xmin, ymin, xmax, ymax):
     """Draw a bounding box on the image."""
-    color = (128,0,128)  # Purple colour rectangle to denote the bounding box
+    color = (0, 255, 0) # Green rectangle to denote the bounding box
     thickness = 2 # Thickness of the rectangle
     return cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, thickness)
 
