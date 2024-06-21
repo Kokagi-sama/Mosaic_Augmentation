@@ -115,7 +115,7 @@ print_boundary()
 # Make sure x_ratio is within its bound, 0.0 < x < 1.0
 x_ratio = -1
 while x_ratio <= 0 or x_ratio >= 1:
-    x_ratio = float(input("\nInput the partition ratio of horizontal plane/x plane (0.0 < x < 1.0): "))
+    x_ratio = float(input("\nInput the partition ratio of horizontal plane/x plane (0.0 < x <1.0)\nE.g. x_ratio = 0.3 will result in 1st and 3rd quadrant occupying 0.3 of the final image and 2nd and 4th quadrant occupying 0.7 of the rest of the final image.: "))
     if x_ratio <= 0 or x_ratio >= 1:
         print("\nInvalid input. Please re-enter a ratio between 0.0 and 1.0.")
 
@@ -124,7 +124,7 @@ print_boundary()
 # Make sure y_ratio is within its bound, 0.0 < y < 1.0
 y_ratio = -1
 while y_ratio <= 0 or y_ratio >= 1:
-    y_ratio = float(input("\nInput the partition ratio of vertical plane/y plane (0.0 < y < 1.0): "))
+    y_ratio = float(input("\nInput the partition ratio of vertical plane/y plane (0.0 < y < 1.0)\nE.g. y_ratio = 0.4 will result in 1st and 2nd quadrant occupying 0.4 of the final image and 3rd and 4th quadrant occupying 0.6 of the rest of the final image.: "))
     if y_ratio <= 0 or y_ratio >= 1:
         print("\nInvalid input. Please re-enter a ratio between 0.0 and 1.0.")
 
