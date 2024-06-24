@@ -8,8 +8,7 @@ import xml.etree.ElementTree as ET
 def print_boundary():
     """Print a boundary within terminal for ease of sight."""
     print("-----------------------------------------------------------------------------------------------------")
-    return None
-    
+
 def load_image(image_path):
     """Load an image from the given file path."""
     return cv2.imread(image_path)
@@ -50,7 +49,7 @@ def parse_xml_annotations(xml_path):
         # Get the root element of the XML file
         root = tree.getroot()
 
-        # Initialise empty array to kept all annotations that are needed later.
+        # Initialise empty array to keep all annotations that are needed later.
         annotations = []
         
         # Find all objects within the XML to be annotated
@@ -102,11 +101,23 @@ def crop_random_region(image, x_start, x_end, y_start, y_end):
     # Crop the region from the image
     cropped_region = image[start_y:end_y, start_x:end_x]
     
-    return cropped_region
+    return cropped_region, start_y, end_y, start_x, end_x
+
+def apply_mask(image, start_x, end_x, start_y, end_y):
     
+    """Apply a mask to the specified region of the image, keeping only the cropped region and masking out the rest."""
+    # Create a mask
+    mask = np.zeros(image.shape[:2], np.uint8)
+    mask[start_y:end_y, start_x:end_x] = 255  # Define the region of interest (ROI)
+
+    # Compute the bitwise AND using the mask
+    masked_image = cv2.bitwise_and(image, image, mask=mask)
+
+    return masked_image
+
 def mosaic_augmentation(image_paths, x_coords, y_coords, output_size=416):
     """Create a mosaic image with variable quadrant sizes by cropping specific regions and drawing bounding boxes."""
-    # Create an empty canvas for the mosaic
+    # Create an empty canvas for the mosaic (black background)
     mosaic_image = np.zeros((output_size, output_size, 3), dtype=np.uint8)
     
     # Iterate over each image path and its corresponding quadrant coordinates
@@ -122,35 +133,38 @@ def mosaic_augmentation(image_paths, x_coords, y_coords, output_size=416):
         # Get the coordinates for placing the image
         x_start, x_end = x_coords[idx]
         y_start, y_end = y_coords[idx]
-        
-        # Find corresponding XML annotation file
-        xml_path = os.path.splitext(image_path)[0] + '.xml'
-        
-        if os.path.exists(xml_path):
-            # Load annotations from XML file
-            annotations = parse_xml_annotations(xml_path)
-            
-            # Draw bounding boxes from annotations
-            for annotation in annotations:
-                xmin = int(annotation['xmin'])
-                xmax = int(annotation['xmax'])
-                ymin = int(annotation['ymin'])
-                ymax = int(annotation['ymax'])
-                original_image = draw_bounding_box(original_image, xmin, ymin, xmax, ymax)
-                
-        # Resize the image to match output_size if necessary
-        if original_image.shape[0] != output_size or original_image.shape[1] != output_size:
-            original_image = resize_image(original_image, (output_size, output_size))
-        
+                                
         # Crop a random region from the original image within its quadrant
-        cropped_region = crop_random_region(original_image, x_start, x_end, y_start, y_end)
+        cropped_region, start_y, end_y, start_x, end_x = crop_random_region(original_image, x_start, x_end, y_start, y_end)
         
         if cropped_region is None:
             print(f"\nFailed to crop region from image: {image_path}")
             continue
         
+        # Create a mask for the cropped region
+        masked_image = apply_mask(original_image, start_x, end_x, start_y, end_y)
+                      
+        # Draw bounding boxes on the cropped region (if annotations are available)
+        xml_path = os.path.splitext(image_path)[0] + '.xml'
+        if os.path.exists(xml_path):
+            annotations = parse_xml_annotations(xml_path)
+            for annotation in annotations:
+                xmin = int(annotation['xmin'])
+                xmax = int(annotation['xmax'])
+                ymin = int(annotation['ymin'])
+                ymax = int(annotation['ymax'])
+                
+                # Check if bounding box coordinates are within cropped region boundaries
+                if (xmin >= start_x and xmax <= end_x and ymin >= start_y and ymax <= end_y):
+                    # Draw bounding box on the mosaic image
+                    masked_image = draw_bounding_box(masked_image, xmin, ymin, xmax, ymax)
+
         # Place the cropped region in the mosaic canvas
-        mosaic_image[y_start:y_end, x_start:x_end] = cropped_region
+        mosaic_image[y_start:y_end, x_start:x_end] = masked_image[start_y:end_y, start_x:end_x]
+    
+    # Resize the mosaic image to match output_size if necessary
+    if mosaic_image.shape[0] != output_size or mosaic_image.shape[1] != output_size:
+        mosaic_image = resize_image(mosaic_image, (output_size, output_size))
     
     return mosaic_image
 
