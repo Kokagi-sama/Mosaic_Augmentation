@@ -24,19 +24,19 @@ def display_image(image):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-def compute_coords(x_ratio, y_ratio, output_size):
+def compute_coords(x_ratio, y_ratio, original_size):
     """Compute x_coords and y_coords based on partition ratios and output size."""
     if x_ratio >= 1.0 or y_ratio >= 1.0 or x_ratio <= 0 or y_ratio <= 0:
         print("\nInvalid ratio. Ratios should be between 0.0 and 1.0")
         return None, None
     
     # Calculate the boundary for x and y
-    x_bound = int(x_ratio * output_size)
-    y_bound = int(y_ratio * output_size)
+    x_bound = int(x_ratio * original_size[0])
+    y_bound = int(y_ratio * original_size[1])
     
     # Define coordinates for four quadrants
-    x_coords = [(0, x_bound), (x_bound, output_size), (0, x_bound), (x_bound, output_size)]
-    y_coords = [(0, y_bound), (0, y_bound), (y_bound, output_size), (y_bound, output_size)]
+    x_coords = [(0, x_bound), (x_bound, original_size[1]), (0, x_bound), (x_bound, original_size[1])]
+    y_coords = [(0, y_bound), (0, y_bound), (y_bound, original_size[0]), (y_bound, original_size[0])]
            
     return x_coords, y_coords
 
@@ -108,42 +108,43 @@ def apply_mask(image, start_x, end_x, start_y, end_y):
     """Apply a mask to the specified region of the image, keeping only the cropped region and masking out the rest."""
     # Create a mask
     mask = np.zeros(image.shape[:2], np.uint8)
-    mask[start_y:end_y, start_x:end_x] = 255  # Define the region of interest (ROI)
+    mask[start_y:end_y, start_x:end_x] = 255  # Define the region of interest (ROI) via the coordinates given.
 
     # Compute the bitwise AND using the mask
     masked_image = cv2.bitwise_and(image, image, mask=mask)
 
     return masked_image
 
-def mosaic_augmentation(image_paths, x_coords, y_coords, output_size=416):
+def mosaic_augmentation(image_paths, x_coords, y_coords, original_size=(416, 416), output_size=416):
     """Create a mosaic image with variable quadrant sizes by cropping specific regions and drawing bounding boxes."""
     # Create an empty canvas for the mosaic (black background)
-    mosaic_image = np.zeros((output_size, output_size, 3), dtype=np.uint8)
-    
+    mosaic_image = np.zeros((original_size[1], original_size[0], 3), dtype=np.uint8)
+
     # Iterate over each image path and its corresponding quadrant coordinates
     for idx, image_path in enumerate(image_paths):
         # Load the original image
         original_image = load_image(image_path)
-        
+
         # Check if image loaded successfully
         if original_image is None:
             print(f"\nFailed to load image: {image_path}")
             continue
-        
+
         # Get the coordinates for placing the image
         x_start, x_end = x_coords[idx]
         y_start, y_end = y_coords[idx]
-                                
+
         # Crop a random region from the original image within its quadrant
         cropped_region, start_y, end_y, start_x, end_x = crop_random_region(original_image, x_start, x_end, y_start, y_end)
-        
+
+        # Error message for failure of cropping
         if cropped_region is None:
             print(f"\nFailed to crop region from image: {image_path}")
             continue
-        
+
         # Create a mask for the cropped region
         masked_image = apply_mask(original_image, start_x, end_x, start_y, end_y)
-                      
+
         # Draw bounding boxes on the cropped region (if annotations are available)
         xml_path = os.path.splitext(image_path)[0] + '.xml'
         if os.path.exists(xml_path):
@@ -153,7 +154,7 @@ def mosaic_augmentation(image_paths, x_coords, y_coords, output_size=416):
                 xmax = int(annotation['xmax'])
                 ymin = int(annotation['ymin'])
                 ymax = int(annotation['ymax'])
-                
+
                 # Check if bounding box coordinates are within cropped region boundaries
                 if (xmin >= start_x and xmax <= end_x and ymin >= start_y and ymax <= end_y):
                     # Draw bounding box on the mosaic image
@@ -161,11 +162,11 @@ def mosaic_augmentation(image_paths, x_coords, y_coords, output_size=416):
 
         # Place the cropped region in the mosaic canvas
         mosaic_image[y_start:y_end, x_start:x_end] = masked_image[start_y:end_y, start_x:end_x]
-    
+
     # Resize the mosaic image to match output_size if necessary
     if mosaic_image.shape[0] != output_size or mosaic_image.shape[1] != output_size:
         mosaic_image = resize_image(mosaic_image, (output_size, output_size))
-    
+
     return mosaic_image
 
 # Directory containing JPEG images and XML annotations
@@ -173,6 +174,12 @@ image_directory = 'images/'
 
 # Find all JPG files in the directory
 image_paths = glob.glob(os.path.join(image_directory, '*.jpg'))
+
+# Read first of the image paths
+sample_image = cv2.imread(image_paths[0])
+
+# Get original size
+original_size = sample_image.shape[:2]
 
 # Make sure output_size is a natural number, N >= 0
 output_size = -1
@@ -203,13 +210,13 @@ while y_ratio <= 0 or y_ratio >= 1:
         print("\nInvalid input. Please re-enter a ratio between 0.0 and 1.0.")
 
 # Compute x_coords and y_coords based on ratios and output_size
-x_coords, y_coords = compute_coords(x_ratio, y_ratio, output_size)
+x_coords, y_coords = compute_coords(x_ratio, y_ratio, original_size)
 
 # Check if compute_coords failed
 if x_coords is None or y_coords is None:
     print("\nFailed to compute coordinates for mosaic. Exiting.")
 else:
     # Generate mosaic image using computed coordinates
-    mosaic_image = mosaic_augmentation(image_paths, x_coords, y_coords, output_size)
+    mosaic_image = mosaic_augmentation(image_paths, x_coords, y_coords, original_size, output_size)
     
     display_image(mosaic_image)
