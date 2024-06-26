@@ -81,7 +81,7 @@ def draw_bounding_box(image, xmin, ymin, xmax, ymax):
 def crop_random_region(image, x_start, x_end, y_start, y_end):
     """Crop a random region from the image based on given start and end coordinates."""
     # Retrieve the original height and width of the image
-    h, w, _ = image.shape
+    height, width, _ = image.shape
     
     # Calculate width and height of the region to crop
     region_width = x_end - x_start
@@ -93,8 +93,8 @@ def crop_random_region(image, x_start, x_end, y_start, y_end):
         return None
     
     # Randomly select a position within the region
-    start_x = random.randint(0, w - region_width)  # Ensure start_x within image bounds
-    start_y = random.randint(0, h - region_height)  # Ensure start_y within image bounds
+    start_x = random.randint(0, width - region_width)  # Ensure start_x within image bounds
+    start_y = random.randint(0, height - region_height)  # Ensure start_y within image bounds
     end_x = start_x + region_width
     end_y = start_y + region_height
     
